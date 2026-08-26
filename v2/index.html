@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Courtside</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <button id="backBtn" class="round-btn" hidden aria-label="Retour">
+      <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <h1 id="title">Courtside</h1>
+    <button id="avatarBtn" class="av av-sm" aria-label="Profil"></button>
+  </header>
+
+  <main id="view"></main>
+
+  <nav id="tabbar" aria-label="Navigation principale">
+    <span id="tabInk" aria-hidden="true"></span>
+    <button data-tab="home" class="tab is-on">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M4.6 6.4c4 3.1 4 11.2 0 11.2M19.4 6.4c-4 3.1-4 11.2 0 11.2"/></svg>
+      <span>Terrains</span>
+    </button>
+    <button data-tab="play" class="tab">
+      <svg viewBox="0 0 24 24"><path d="M7 4h10v4.2a5 5 0 01-10 0V4z"/><path d="M7 6.2H4.2v1a3 3 0 003 3M17 6.2h2.8v1a3 3 0 01-3 3"/><path d="M12 13.4V17M9 20h6"/></svg>
+      <span>Matchs</span>
+    </button>
+    <button data-tab="bookings" class="tab">
+      <svg viewBox="0 0 24 24"><rect x="3.2" y="5.2" width="17.6" height="15.6" rx="5"/><path d="M8 3.2v4M16 3.2v4M3.2 11h17.6"/></svg>
+      <span>Agenda</span>
+    </button>
+    <button data-tab="friends" class="tab">
+      <svg viewBox="0 0 24 24"><circle cx="9.2" cy="8.8" r="3.6"/><path d="M2.8 20c0-3.4 2.9-5.6 6.4-5.6S15.6 16.6 15.6 20"/><path d="M16.4 8.2a3 3 0 010 5.6M18 20c0-2.2-.7-3.9-1.9-5"/></svg>
+      <span>Amis</span>
+    </button>
+    <button data-tab="profile" class="tab">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.6 20c0-4.1 3.4-6.6 7.4-6.6s7.4 2.5 7.4 6.6"/></svg>
+      <span>Profil</span>
+    </button>
+  </nav>
+</div>
+
+<div id="sheet" class="sheet" hidden>
+  <div class="sheet-veil" data-close></div>
+  <div class="sheet-card" role="dialog" aria-modal="true">
+    <div class="sheet-grip"></div>
+    <div id="sheetBody"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>

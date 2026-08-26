@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Courtside</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <button id="backBtn" class="icon-btn" hidden aria-label="Retour">
+      <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <h1 id="title">Courtside</h1>
+    <button id="avatarBtn" class="avatar sm" aria-label="Profil"></button>
+  </header>
+
+  <main id="view"></main>
+
+  <nav id="tabbar">
+    <button data-tab="home" class="tab active">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M4.5 6.5c4 3 4 11 0 11M19.5 6.5c-4 3-4 11 0 11"/></svg>
+      <span>Terrains</span>
+    </button>
+    <button data-tab="play" class="tab">
+      <svg viewBox="0 0 24 24"><path d="M7 4h10v4a5 5 0 01-10 0V4z"/><path d="M7 6H4v1a3 3 0 003 3M17 6h3v1a3 3 0 01-3 3"/><path d="M12 13v4M9 20h6"/></svg>
+      <span>Matchs</span>
+    </button>
+    <button data-tab="bookings" class="tab">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>
+      <span>Réservations</span>
+    </button>
+    <button data-tab="friends" class="tab">
+      <svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.5"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 8.5a3 3 0 010 5.5M17.5 20c0-2.2-.8-3.9-2-5"/></svg>
+      <span>Amis</span>
+    </button>
+    <button data-tab="profile" class="tab">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20c0-4 3.4-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></svg>
+      <span>Profil</span>
+    </button>
+  </nav>
+</div>
+
+<div id="sheet" class="sheet" hidden>
+  <div class="sheet-backdrop" data-close></div>
+  <div class="sheet-panel" role="dialog" aria-modal="true">
+    <div class="sheet-grab"></div>
+    <div id="sheetBody"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>

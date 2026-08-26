@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Courtside</title>
+<meta name="description" content="Réserver un terrain de tennis, partager la note, trouver des joueurs de son niveau.">
+<style>
+  :root { --bg:#f6f6f7; --card:#fff; --ink:#0a0a0b; --ink-2:#6b6b72; --line:#e9e9ec; --red:#ee1c34; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#08080a; --card:#141416; --ink:#f6f6f8; --ink-2:#9b9ba3; --line:#26262b; --red:#ff3b52; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin:0; min-height:100vh; background:var(--bg); color:var(--ink);
+    font:16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:grid; place-items:center; padding:32px 20px;
+  }
+  main { width:100%; max-width:440px; }
+  .mark {
+    width:64px; height:64px; border-radius:22px; background:var(--red);
+    display:grid; place-items:center; margin-bottom:22px;
+  }
+  .mark svg { width:32px; height:32px; fill:none; stroke:#fff; stroke-width:1.8; }
+  h1 { font-size:38px; font-weight:800; letter-spacing:-.035em; margin:0 0 10px; }
+  p.lead { margin:0 0 30px; color:var(--ink-2); font-size:16.5px; }
+  a.card {
+    display:block; text-decoration:none; color:inherit; background:var(--card);
+    border-radius:24px; padding:20px; margin-bottom:14px;
+    box-shadow:0 1px 2px rgba(10,10,11,.04), 0 10px 30px -12px rgba(10,10,11,.16);
+    transition:transform .3s cubic-bezier(.2,.9,.28,1);
+  }
+  a.card:hover { transform:translateY(-3px); }
+  .top { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .name { font-weight:800; font-size:18px; letter-spacing:-.02em; }
+  .pill {
+    font-size:11.5px; font-weight:800; border-radius:999px; padding:4px 10px;
+    background:var(--red); color:#fff; letter-spacing:.02em;
+  }
+  .pill.grey { background:var(--line); color:var(--ink-2); }
+  .desc { color:var(--ink-2); font-size:14.5px; margin:0; }
+  footer { margin-top:26px; color:var(--ink-2); font-size:13px; }
+  footer a { color:var(--red); }
+</style>
+</head>
+<body>
+<main>
+  <div class="mark">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M4.6 6.4c4 3.1 4 11.2 0 11.2M19.4 6.4c-4 3.1-4 11.2 0 11.2"/></svg>
+  </div>
+
+  <h1>Courtside</h1>
+  <p class="lead">Réserver un terrain de tennis, partager la note avec ses amis, et trouver des joueurs de son niveau.</p>
+
+  <a class="card" href="/v2/">
+    <div class="top"><span class="name">Version 2</span><span class="pill">Actuelle</span></div>
+    <p class="desc">Interface blanc, rouge et noir. Choix de la surface de jeu, niveau calculé par surface, animations.</p>
+  </a>
+
+  <a class="card" href="/v1/">
+    <div class="top"><span class="name">Version 1</span><span class="pill grey">Archive</span></div>
+    <p class="desc">Première version, conservée pour comparaison. Palette verte, sans les surfaces.</p>
+  </a>
+
+  <footer>Prototype de démonstration. Les clubs, les joueurs et les disponibilités sont fictifs.</footer>
+</main>
+</body>
+</html>
