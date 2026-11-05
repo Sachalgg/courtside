@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Courtside",
+    "slug": "courtside",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "be.courtside.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Courtside utilise votre position pour trier les clubs par distance."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#EE1C34",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "be.courtside.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Courtside utilise votre position pour trier les clubs par distance."
+        }
+      ]
+    ],
+    "scheme": "courtside",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
