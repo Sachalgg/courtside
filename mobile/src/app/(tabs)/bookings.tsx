@@ -3,9 +3,11 @@ import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FadeIn } from '@/components/FadeIn';
 import { Icon } from '@/components/Icon';
 import { Button, EmptyState, Row, Segmented, Txt } from '@/components/ui';
 import { eur, isUpcoming } from '@/lib/availability';
+import { myCost, owedToMe } from '@/lib/bookings';
 import { clubById, surfaceById } from '@/lib/clubs';
 import { fmtTime, parseDateKey, relativeDay } from '@/lib/time';
 import type { Booking } from '@/lib/types';
@@ -67,7 +69,11 @@ export default function Bookings() {
               <EmptyState icon="clock" title="Pas encore d'historique" body="Vos matchs joués et annulés s'afficheront ici." />
             )
           }
-          renderItem={({ item }) => <BookingRow booking={item} now={now} />}
+          renderItem={({ item, index }) => (
+            <FadeIn index={index}>
+              <BookingRow booking={item} now={now} />
+            </FadeIn>
+          )}
         />
       )}
     </SafeAreaView>
@@ -106,9 +112,23 @@ function BookingRow({ booking: b, now }: { booking: Booking; now: Date }) {
             {relativeDay(b.date, now)} · Terrain {b.court} · {surfaceById(b.surface).short}
           </Txt>
         </Row>
-        <Txt variant="caption" color={cancelled ? t.ink2 : t.ink}>
-          {cancelled ? 'Annulée' : `${eur(b.price)} · réf. ${b.ref}`}
-        </Txt>
+        <Row gap={6}>
+          {b.kind === 'joined' && (
+            <View style={[styles.tag, { backgroundColor: t.redWash }]}>
+              <Txt variant="caption" color={t.red} style={{ fontSize: 11 }}>
+                Match ouvert
+              </Txt>
+            </View>
+          )}
+          <Txt variant="caption" color={cancelled ? t.ink2 : t.ink}>
+            {cancelled ? (b.kind === 'joined' ? 'Désisté' : 'Annulée') : `${eur(myCost(b))} · réf. ${b.ref}`}
+          </Txt>
+          {owedToMe(b) > 0 && (
+            <Txt variant="caption" color={t.red}>
+              · on vous doit {eur(owedToMe(b))}
+            </Txt>
+          )}
+        </Row>
       </View>
       <Icon name="chevronRight" size={18} color={t.ink3} />
     </Pressable>
@@ -117,5 +137,6 @@ function BookingRow({ booking: b, now }: { booking: Booking; now: Date }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 12, borderRadius: radius.card, borderWidth: 1 },
+  tag: { paddingHorizontal: 7, height: 20, borderRadius: 10, justifyContent: 'center' },
   date: { width: 58, height: 58, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
 });

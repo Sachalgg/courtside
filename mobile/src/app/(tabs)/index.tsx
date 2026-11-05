@@ -5,12 +5,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ClubMap from '@/components/ClubMap';
 import { ClubCard } from '@/components/ClubCard';
+import { FadeIn } from '@/components/FadeIn';
 import { Icon } from '@/components/Icon';
 import { Chip, EmptyState, Row, Txt } from '@/components/ui';
-import { nextFreeSlot } from '@/lib/availability';
-import { CLUBS, minPrice, SURFACES, SurfaceId } from '@/lib/clubs';
+import { isUpcoming, nextFreeSlot } from '@/lib/availability';
+import { clubById, CLUBS, minPrice, SURFACES, SurfaceId } from '@/lib/clubs';
 import { distanceKm } from '@/lib/geo';
-import { dateKey } from '@/lib/time';
+import { dateKey, fmtTime, relativeDay } from '@/lib/time';
 import { useLocation } from '@/state/location';
 import { useNow, useStore } from '@/state/store';
 import { radius, useTheme } from '@/theme';
@@ -29,7 +30,7 @@ const normalize = (s: string) =>
 export default function Explore() {
   const t = useTheme();
   const now = useNow();
-  const { allBookings, favorites, toggleFavorite, user } = useStore();
+  const { allBookings, bookings, favorites, toggleFavorite, user } = useStore();
   const { origin, located, status, request } = useLocation();
   const { width } = useWindowDimensions();
 
@@ -59,6 +60,14 @@ export default function Explore() {
         sort === 'price' ? a.price - b.price : sort === 'rating' ? b.club.rating - a.club.rating : a.distance - b.distance,
       );
   }, [query, surface, onlyFavs, favorites, origin, today, allBookings, now, sort]);
+
+  const next = useMemo(
+    () =>
+      bookings
+        .filter((b) => b.status === 'confirmed' && isUpcoming(b, now))
+        .sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start)[0],
+    [bookings, now],
+  );
 
   const cardWidth = Math.min(width - 48, 380);
   const open = (id: string) => router.push({ pathname: '/club/[id]', params: { id, ...(surface !== 'all' && { surface }) } });
@@ -161,6 +170,26 @@ export default function Explore() {
           {locateBtn}
         </Row>
       </Row>
+      {next && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Voir mon prochain match"
+          onPress={() => router.push({ pathname: '/booking/[id]', params: { id: next.id } })}
+          style={[styles.next, { backgroundColor: t.hero }]}>
+          <View style={[styles.nextIcon, { backgroundColor: t.red }]}>
+            <Icon name="ball" size={20} color={t.onRed} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Txt variant="caption" color={t.onHero + 'aa'}>
+              Prochain match · {relativeDay(next.date, now)} à {fmtTime(next.start)}
+            </Txt>
+            <Txt variant="label" color={t.onHero} numberOfLines={1}>
+              {clubById(next.clubId)?.name} · terrain {next.court}
+            </Txt>
+          </View>
+          <Icon name="chevronRight" size={18} color={t.onHero} />
+        </Pressable>
+      )}
       {search}
       {chips}
       {denied}
@@ -275,8 +304,8 @@ export default function Explore() {
           ListEmptyComponent={empty}
           contentContainerStyle={{ paddingBottom: 24 }}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-          renderItem={({ item }) => (
-            <View style={{ paddingHorizontal: 16 }}>
+          renderItem={({ item, index }) => (
+            <FadeIn index={index} style={{ paddingHorizontal: 16 }}>
               <ClubCard
                 club={item.club}
                 distanceKm={item.distance}
@@ -286,7 +315,7 @@ export default function Explore() {
                 onPress={() => open(item.club.id)}
                 onToggleFavorite={user ? () => toggleFavorite(item.club.id) : () => router.push('/sign-in')}
               />
-            </View>
+            </FadeIn>
           )}
         />
       )}
@@ -297,6 +326,8 @@ export default function Explore() {
 const styles = StyleSheet.create({
   toggle: { flexDirection: 'row', borderRadius: 25, padding: 3, height: 50, borderWidth: 1 },
   toggleBtn: { width: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  next: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 22 },
+  nextIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 16, paddingTop: 8, gap: 8 },
   locateWrap: { position: 'absolute', right: 16 },
   floating: {

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { Avatar, Button, Card, Chip, Divider, EmptyState, Row, Txt } from '@/components/ui';
 import { eur, isUpcoming } from '@/lib/availability';
+import { myCost, owedToMe } from '@/lib/bookings';
 import { clubById, SURFACES } from '@/lib/clubs';
 import { fmtMonthYear, parseDateKey } from '@/lib/time';
 import { LEVELS } from '@/lib/types';
@@ -27,7 +28,9 @@ export default function Account() {
     return {
       played: played.length,
       hours: played.reduce((h, b) => h + b.duration / 60, 0),
-      spent: kept.reduce((s, b) => s + b.price, 0),
+      spent: kept.reduce((s, b) => s + myCost(b), 0),
+      owed: kept.reduce((s, b) => s + owedToMe(b), 0),
+      joined: kept.filter((b) => b.kind === 'joined').length,
       topClub: topClub ? clubById(topClub)?.name : null,
     };
   }, [bookings, now]);
@@ -79,6 +82,18 @@ export default function Account() {
             <Stat value={eur(stats.spent)} label="réservés" />
           </Row>
         </View>
+
+        {stats.owed > 0 && (
+          <Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')}>
+            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, borderColor: t.red }}>
+              <Icon name="euro" color={t.red} />
+              <Txt style={{ flex: 1 }}>
+                Vos partenaires vous doivent <Txt variant="label">{eur(stats.owed)}</Txt>
+              </Txt>
+              <Icon name="chevronRight" size={18} color={t.ink3} />
+            </Card>
+          </Pressable>
+        )}
 
         {stats.topClub && (
           <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>

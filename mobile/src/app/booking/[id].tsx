@@ -4,8 +4,10 @@ import { Linking, Pressable, ScrollView, Share, StyleSheet, View } from 'react-n
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, IconName } from '@/components/Icon';
+import { PlayersCard } from '@/components/PlayersCard';
 import { Button, Card, Divider, EmptyState, Row, Txt } from '@/components/ui';
 import { canCancelFree, eur, FREE_CANCEL_HOURS, isUpcoming, splitEqually } from '@/lib/availability';
+import { sameSlotNextWeek } from '@/lib/bookings';
 import { clubById, surfaceById } from '@/lib/clubs';
 import { capitalize, fmtDateLong, fmtDuration, fmtTime, parseDateKey } from '@/lib/time';
 import { useNow, useStore } from '@/state/store';
@@ -41,6 +43,7 @@ export default function BookingScreen() {
   const cancelled = b.status === 'cancelled';
   const freeCancel = canCancelFree(b, now);
   const share = splitEqually(b.price, b.players)[b.players - 1];
+  const joined = b.kind === 'joined';
   const when = `${fmtDateLong(parseDateKey(b.date))}, ${fmtTime(b.start)} à ${fmtTime(b.start + b.duration)}`;
 
   const onShare = () =>
@@ -51,7 +54,17 @@ export default function BookingScreen() {
         `${eur(share)} par joueur. Réf. ${b.ref}`,
     }).catch(() => {});
 
-  const heroTitle = cancelled ? 'Annulée' : fresh && upcoming ? "C'est réservé" : upcoming ? 'À venir' : 'Joué';
+  const heroTitle = cancelled
+    ? joined
+      ? 'Désisté'
+      : 'Annulée'
+    : fresh && upcoming
+      ? joined
+        ? 'Vous y êtes'
+        : "C'est réservé"
+      : upcoming
+        ? 'À venir'
+        : 'Joué';
 
   return (
     <ScrollView
@@ -100,12 +113,22 @@ export default function BookingScreen() {
         <Line icon="calendar" title={fmtDateLong(parseDateKey(b.date))} sub={`${fmtTime(b.start)} à ${fmtTime(b.start + b.duration)} · ${fmtDuration(b.duration)}`} />
         <Line icon={b.surface} title={`Terrain ${b.court} · ${surfaceById(b.surface).name}`} sub={surfaceById(b.surface).note} />
         <Line icon="pin" title={club.name} sub={club.address} />
-        <Line
-          icon={b.payment === 'card' ? 'card' : 'euro'}
-          title={`${eur(b.price)} · ${b.payment === 'card' ? 'payé par carte' : 'à payer au club'}`}
-          sub={`${b.players === 2 ? 'Simple' : 'Double'}, ${eur(share)} par joueur`}
-        />
+        {joined ? (
+          <Line
+            icon="euro"
+            title={`${eur(share)} · votre part, à l'accueil`}
+            sub={`Match ${b.players === 2 ? 'simple' : 'double'} organisé par ${b.organizer ?? 'un joueur'}`}
+          />
+        ) : (
+          <Line
+            icon={b.payment === 'card' ? 'card' : 'euro'}
+            title={`${eur(b.price)} · ${b.payment === 'card' ? 'payé par carte' : 'à payer au club'}`}
+            sub={`${b.players === 2 ? 'Simple' : 'Double'}, ${eur(share)} par joueur`}
+          />
+        )}
       </Card>
+
+      <PlayersCard booking={b} editable={!cancelled && !joined} />
 
       <Row gap={10}>
         <Button
@@ -120,12 +143,16 @@ export default function BookingScreen() {
 
       {upcoming && !cancelled && (
         <Card style={{ gap: 12 }}>
-          <Txt variant="heading">Annulation</Txt>
+          <Txt variant="heading">{joined ? 'Désistement' : 'Annulation'}</Txt>
           {freeCancel ? (
             <>
               <Txt muted>
                 Gratuite jusqu'à {FREE_CANCEL_HOURS} h avant le début.{' '}
-                {b.payment === 'card' ? 'Vous êtes remboursé sur votre carte.' : 'Rien à payer.'}
+                {joined
+                  ? 'Votre place est rendue aux autres joueurs.'
+                  : b.payment === 'card'
+                    ? 'Vous êtes remboursé sur votre carte.'
+                    : 'Rien à payer.'}
               </Txt>
               {confirming ? (
                 <Row gap={10}>
@@ -140,7 +167,11 @@ export default function BookingScreen() {
                   />
                 </Row>
               ) : (
-                <Button title="Annuler la réservation" kind="ghost" onPress={() => setConfirming(true)} />
+                <Button
+                  title={joined ? 'Quitter le match' : 'Annuler la réservation'}
+                  kind="ghost"
+                  onPress={() => setConfirming(true)}
+                />
               )}
             </>
           ) : (
@@ -158,6 +189,25 @@ export default function BookingScreen() {
             </>
           )}
         </Card>
+      )}
+
+      {!upcoming && !joined && (
+        <Button
+          title="Rejouer au même créneau"
+          icon="calendar"
+          onPress={() =>
+            router.push({
+              pathname: '/club/[id]',
+              params: {
+                id: b.clubId,
+                surface: b.surface,
+                day: sameSlotNextWeek(b, now),
+                start: String(b.start),
+                duration: String(b.duration),
+              },
+            })
+          }
+        />
       )}
 
       {fresh && (

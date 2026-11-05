@@ -23,6 +23,7 @@ function Gate() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="club/[id]" />
       <Stack.Screen name="book" />
+      <Stack.Screen name="match/[id]" />
       <Stack.Screen name="booking/[id]" />
       <Stack.Screen name="sign-in" options={{ presentation: 'modal' }} />
     </Stack>

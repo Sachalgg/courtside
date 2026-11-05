@@ -34,6 +34,10 @@ export default function TabsLayout() {
         options={{ title: 'Explorer', tabBarIcon: ({ color }) => <Icon name="map" color={color} /> }}
       />
       <Tabs.Screen
+        name="play"
+        options={{ title: 'Jouer', tabBarIcon: ({ color }) => <Icon name="ball" color={color} /> }}
+      />
+      <Tabs.Screen
         name="bookings"
         options={{
           title: 'Réservations',

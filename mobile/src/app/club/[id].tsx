@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Linking, Pressable, ScrollView, ScrollViewInstance, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
@@ -9,6 +9,7 @@ import { DURATIONS, eur, slotsFor } from '@/lib/availability';
 import { clubById, clubSurfaces, surfaceById, SurfaceId } from '@/lib/clubs';
 import { distanceKm, fmtKm } from '@/lib/geo';
 import { dateKey, fmtDuration, fmtTime, fmtWeekdayShort, nextDays, parseDateKey } from '@/lib/time';
+import { tap } from '@/lib/haptics';
 import { useLocation } from '@/state/location';
 import { useNow, useStore } from '@/state/store';
 import { radius, useTheme } from '@/theme';
@@ -18,7 +19,7 @@ const DAYS_AHEAD = 14;
 export default function ClubScreen() {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ id: string; surface?: SurfaceId }>();
+  const params = useLocalSearchParams<{ id: string; surface?: SurfaceId; day?: string; start?: string; duration?: string }>();
   const club = clubById(params.id);
   const now = useNow();
   const { allBookings, favorites, toggleFavorite, user } = useStore();
@@ -30,13 +31,30 @@ export default function ClubScreen() {
     (user?.favSurface && surfaces.includes(user.favSurface) && user.favSurface) ||
     surfaces[0];
   const [surface, setSurface] = useState<SurfaceId>(preferred);
+  const dayStrip = useRef<ScrollViewInstance>(null);
   const todayKey = dateKey(now);
-  const [pickedDay, setDay] = useState(todayKey);
+  const [pickedDay, setDay] = useState(params.day && /^\d{4}-\d{2}-\d{2}$/.test(params.day) ? params.day : todayKey);
   // If the screen stays open past midnight, never offer a day that is over.
   const day = pickedDay < todayKey ? todayKey : pickedDay;
   const days = useMemo(() => nextDays(parseDateKey(todayKey), DAYS_AHEAD), [todayKey]);
-  const [duration, setDuration] = useState<number>(60);
-  const [start, setStart] = useState<number | null>(null);
+  const [duration, setDuration] = useState<number>(
+    DURATIONS.includes(Number(params.duration) as (typeof DURATIONS)[number]) ? Number(params.duration) : 60,
+  );
+  const wanted = params.start ? Number(params.start) : null;
+  const wantedDay = params.day ?? null;
+  const [start, setStart] = useState<number | null>(wanted);
+
+  // Share of bookable slots still free on each day, for the small bar under each date.
+  const openness = useMemo(() => {
+    const out: Record<string, number> = {};
+    if (!club) return out;
+    for (const d of days) {
+      const k = dateKey(d);
+      const list = slotsFor(club, surface, k, duration, allBookings, now).filter((x) => !x.past);
+      out[k] = list.length ? list.filter((x) => x.freeCourts.length > 0).length / list.length : 0;
+    }
+    return out;
+  }, [club, days, surface, duration, allBookings, now]);
 
   const slots = useMemo(
     () => (club ? slotsFor(club, surface, day, duration, allBookings, now) : []),
@@ -141,7 +159,15 @@ export default function ClubScreen() {
 
           <View style={{ gap: 10 }}>
             <Txt variant="heading">Date</Txt>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            <ScrollView
+              ref={dayStrip}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8 }}
+              onContentSizeChange={() => {
+                const i = days.findIndex((d) => dateKey(d) === day);
+                if (i > 3) dayStrip.current?.scrollTo({ x: (i - 2) * 64, animated: false });
+              }}>
               {days.map((d) => {
                 const key = dateKey(d);
                 const active = key === day;
@@ -150,6 +176,7 @@ export default function ClubScreen() {
                     key={key}
                     accessibilityRole="button"
                     accessibilityState={{ selected: active }}
+                    accessibilityLabel={`${key === todayKey ? "aujourd'hui" : fmtWeekdayShort(d)} ${d.getDate()}, ${Math.round((openness[key] ?? 0) * 100)} % de créneaux libres`}
                     onPress={() => pick(() => setDay(key))}
                     style={[
                       styles.day,
@@ -161,6 +188,14 @@ export default function ClubScreen() {
                     <Txt variant="heading" color={active ? t.bg : t.ink}>
                       {d.getDate()}
                     </Txt>
+                    <View style={[styles.meter, { backgroundColor: active ? t.bg + '40' : t.line }]}>
+                      <View
+                        style={[
+                          styles.meterFill,
+                          { width: `${Math.round((openness[key] ?? 0) * 100)}%`, backgroundColor: active ? t.bg : t.red },
+                        ]}
+                      />
+                    </View>
                   </Pressable>
                 );
               })}
@@ -186,6 +221,11 @@ export default function ClubScreen() {
                 </Txt>
               </Row>
             </Row>
+            {wanted !== null && day === wantedDay && !slots.some((x) => x.start === wanted && x.freeCourts.length > 0) && (
+              <Txt variant="caption" color={t.red}>
+                Votre créneau habituel de {fmtTime(wanted)} est complet ce jour-là. Choisissez une autre heure ou un autre jour.
+              </Txt>
+            )}
             {bookable.length === 0 ? (
               <Card>
                 <Txt muted>Plus aucun créneau aujourd'hui. Choisissez un autre jour.</Txt>
@@ -202,7 +242,10 @@ export default function ClubScreen() {
                       accessibilityRole="button"
                       accessibilityState={{ selected: active, disabled: full }}
                       accessibilityLabel={`${fmtTime(s.start)}, ${full ? 'complet' : eur(s.price)}`}
-                      onPress={() => setStart(s.start)}
+                      onPress={() => {
+                        tap();
+                        setStart(s.start);
+                      }}
                       style={({ pressed }) => [
                         styles.slot,
                         {
@@ -285,7 +328,9 @@ const styles = StyleSheet.create({
   hero: { paddingHorizontal: 20, paddingBottom: 24, borderBottomLeftRadius: radius.hero, borderBottomRightRadius: radius.hero },
   heroBtn: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
   heroPill: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1 },
-  day: { width: 56, height: 66, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  meter: { width: 26, height: 3, borderRadius: 2, overflow: 'hidden', marginTop: 3 },
+  meterFill: { height: 3, borderRadius: 2 },
+  day: { width: 56, height: 72, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   slot: { width: '23.3%', minWidth: 72, flexGrow: 1, height: 58, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   peak: { position: 'absolute', top: 7, right: 8, width: 6, height: 6, borderRadius: 3 },

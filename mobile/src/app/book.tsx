@@ -1,7 +1,6 @@
-import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, IconName } from '@/components/Icon';
@@ -9,6 +8,7 @@ import { Button, Card, Divider, EmptyState, Row, Segmented, Txt } from '@/compon
 import { eur, FREE_CANCEL_HOURS, isPeak, priceFor, splitEqually } from '@/lib/availability';
 import { clubById, surfaceById, SurfaceId } from '@/lib/clubs';
 import { capitalize, fmtDateLong, fmtDuration, fmtTime, parseDateKey } from '@/lib/time';
+import { success } from '@/lib/haptics';
 import type { PaymentMethod } from '@/lib/types';
 import { useStore } from '@/state/store';
 import { radius, useTheme } from '@/theme';
@@ -51,7 +51,7 @@ export default function BookScreen() {
       setError(res.reason);
       return;
     }
-    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    success();
     if (router.canDismiss()) router.dismissAll();
     router.push({ pathname: '/booking/[id]', params: { id: res.booking.id, fresh: '1' } });
   };

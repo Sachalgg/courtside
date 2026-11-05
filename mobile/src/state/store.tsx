@@ -2,9 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useReducer, useState } from 'react';
 
 import { isCourtFree, priceFor } from '@/lib/availability';
+import { clashReason } from '@/lib/bookings';
 import { clubById, SurfaceId } from '@/lib/clubs';
 import { dateKey, startDate } from '@/lib/time';
-import type { Booking, PaymentMethod, User } from '@/lib/types';
+import type { OpenMatch } from '@/lib/matches';
+import type { Booking, Participant, PaymentMethod, User } from '@/lib/types';
 
 const STORAGE_KEY = 'courtside.mobile.v1';
 
@@ -28,6 +30,7 @@ type Action =
   | { type: 'updateUser'; patch: Partial<User> }
   | { type: 'addBooking'; booking: Booking }
   | { type: 'cancelBooking'; id: string }
+  | { type: 'updateParticipant'; bookingId: string; participantId: string; patch: Partial<Participant> }
   | { type: 'toggleFavorite'; clubId: string }
   | { type: 'reset' };
 
@@ -53,6 +56,15 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         allBookings: state.allBookings.map((b) => (b.id === action.id ? { ...b, status: 'cancelled' } : b)),
+      };
+    case 'updateParticipant':
+      return {
+        ...state,
+        allBookings: state.allBookings.map((b) =>
+          b.id === action.bookingId && b.participants
+            ? { ...b, participants: b.participants.map((p) => (p.id === action.participantId ? { ...p, ...action.patch } : p)) }
+            : b,
+        ),
       };
     case 'toggleFavorite': {
       if (!state.session) return state;
@@ -90,6 +102,8 @@ type Store = {
   signOut: () => void;
   updateUser: (patch: Partial<User>) => void;
   book: (req: BookingRequest, now?: Date) => BookResult;
+  joinMatch: (match: OpenMatch, now?: Date) => BookResult;
+  updateParticipant: (bookingId: string, participantId: string, patch: Partial<Participant>) => void;
   cancel: (id: string) => void;
   toggleFavorite: (clubId: string) => void;
   reset: () => void;
@@ -124,18 +138,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!club || !group) return { ok: false, reason: 'Ce terrain n’existe plus.' };
       if (!state.session) return { ok: false, reason: 'Connectez-vous pour réserver.' };
       if (startDate(req.date, req.start).getTime() < now.getTime()) return { ok: false, reason: 'Ce créneau est déjà passé.' };
-      const clash = state.allBookings.find(
-        (b) =>
-          b.owner === state.session &&
-          b.status === 'confirmed' &&
-          b.date === req.date &&
-          b.start < req.start + req.duration &&
-          req.start < b.start + b.duration,
-      );
-      if (clash) {
-        const other = clubById(clash.clubId)?.name ?? 'un autre club';
-        return { ok: false, reason: `Vous jouez déjà à cette heure-là (${other}).` };
-      }
+      const clash = clashReason(state.allBookings, state.session, req);
+      if (clash) return { ok: false, reason: clash };
       let court = 0;
       for (let c = 1; c <= group.courts; c++) {
         if (isCourtFree(club, req.surface, c, req.date, req.start, req.duration, state.allBookings)) {
@@ -159,11 +163,55 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         payment: req.payment,
         status: 'confirmed',
         createdAt: now.toISOString(),
+        kind: 'own',
+        participants: [
+          { id: uid(), name: state.accounts[state.session]?.name ?? 'Moi', me: true, paid: true },
+          ...Array.from({ length: req.players - 1 }, () => ({ id: uid(), name: null, paid: false })),
+        ],
       };
       dispatch({ type: 'addBooking', booking });
       return { ok: true, booking };
     },
-    [state.allBookings, state.session],
+    [state.allBookings, state.session, state.accounts],
+  );
+
+  const joinMatch = useCallback(
+    (m: OpenMatch, now = new Date()): BookResult => {
+      if (!state.session) return { ok: false, reason: 'Connectez-vous pour rejoindre un match.' };
+      if (startDate(m.date, m.start).getTime() < now.getTime()) return { ok: false, reason: 'Ce match a déjà commencé.' };
+      const mine = state.allBookings.filter((b) => b.owner === state.session);
+      if (mine.some((b) => b.matchId === m.id && b.status === 'confirmed')) return { ok: false, reason: 'Vous êtes déjà inscrit.' };
+      if (m.players.length >= m.format) return { ok: false, reason: 'Ce match est complet.' };
+      const clash = clashReason(state.allBookings, state.session, m);
+      if (clash) return { ok: false, reason: clash };
+      const me = state.accounts[state.session]?.name ?? 'Moi';
+      const booking: Booking = {
+        id: uid(),
+        ref: refCode(),
+        owner: state.session,
+        clubId: m.club.id,
+        surface: m.surface,
+        court: m.court,
+        date: m.date,
+        start: m.start,
+        duration: m.duration,
+        price: m.price,
+        players: m.format,
+        payment: 'club',
+        status: 'confirmed',
+        createdAt: now.toISOString(),
+        kind: 'joined',
+        matchId: m.id,
+        organizer: m.players[0],
+        participants: [
+          ...m.players.map((name) => ({ id: uid(), name, paid: false })),
+          { id: uid(), name: me, me: true, paid: false },
+        ],
+      };
+      dispatch({ type: 'addBooking', booking });
+      return { ok: true, booking };
+    },
+    [state.allBookings, state.session, state.accounts],
   );
 
   const value = useMemo<Store>(
@@ -189,11 +237,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       signOut: () => dispatch({ type: 'signOut' }),
       updateUser: (patch) => dispatch({ type: 'updateUser', patch }),
       book,
+      joinMatch,
+      updateParticipant: (bookingId, participantId, patch) =>
+        dispatch({ type: 'updateParticipant', bookingId, participantId, patch }),
       cancel: (id) => dispatch({ type: 'cancelBooking', id }),
       toggleFavorite: (clubId) => dispatch({ type: 'toggleFavorite', clubId }),
       reset: () => dispatch({ type: 'reset' }),
     }),
-    [state, ready, book],
+    [state, ready, book, joinMatch],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
