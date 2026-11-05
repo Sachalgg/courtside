@@ -4,11 +4,12 @@ Prototype d'application de réservation de terrains de tennis, dans l'esprit de 
 
 En ligne : **https://courtside-eta-henna.vercel.app**
 
-Deux versions cohabitent dans ce dépôt.
+Trois versions cohabitent dans ce dépôt.
 
 | Version | Dossier | Ce qu'elle apporte |
 |---|---|---|
-| **v2** (actuelle) | [`v2/`](v2/README.md) | Interface blanc, rouge et noir. Choix de la surface de jeu, niveau calculé par surface, animations. |
+| **mobile** | [`mobile/`](mobile/README.md) | App native iOS et Android en TypeScript (React Native, Expo). Carte des clubs bruxellois, créneaux par demi-heure, réservation, compte. |
+| **v2** (web actuelle) | [`v2/`](v2/README.md) | Interface blanc, rouge et noir. Choix de la surface de jeu, niveau calculé par surface, animations. |
 | v1 (archive) | [`v1/`](v1/README.md) | Première version, conservée pour comparaison. Palette verte, sans les surfaces. |
 
 ## Lancer en local
